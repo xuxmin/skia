@@ -1205,3 +1205,11 @@ sk_sp<GrDirectContext> GrDirectContext::MakeDirect3D(const GrD3DBackendContext& 
     return direct;
 }
 #endif
+
+/*************************************************************************************************/
+
+void GrDirectContext::resetShaderCacheForTesting() {
+    priv().getGpu()->resetShaderCacheForTesting();
+}
+
+/*************************************************************************************************/

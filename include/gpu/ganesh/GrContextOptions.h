@@ -316,7 +316,6 @@ struct SK_API GrContextOptions {
     GrDirectContextDestroyedContext fContextDeleteContext = nullptr;
     GrDirectContextDestroyedProc fContextDeleteProc = nullptr;
 
-#if defined(GPU_TEST_UTILS)
     /**
      * Private options that are only meant for testing within Skia's tools.
      */
@@ -385,7 +384,6 @@ struct SK_API GrContextOptions {
      * Maximum width and height of internal texture atlases.
      */
     int  fMaxTextureAtlasSize = 2048;
-#endif
 
     GrDriverBugWorkarounds fDriverBugWorkarounds;
 };

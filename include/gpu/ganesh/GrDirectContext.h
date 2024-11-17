@@ -921,6 +921,9 @@ public:
     GrDirectContextPriv priv();
     const GrDirectContextPriv priv() const;  // NOLINT(readability-const-return-type)
 
+    // This is for my render engine
+    void resetShaderCacheForTesting();
+
 protected:
     GrDirectContext(GrBackendApi backend,
                     const GrContextOptions& options,
