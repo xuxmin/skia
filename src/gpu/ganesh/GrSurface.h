@@ -44,6 +44,8 @@ public:
      */
     int height() const { return fDimensions.height(); }
 
+    SkScalar headroom() const { return fHeadroom; }
+
     /**
      * Helper that gets the width and height of the surface as a bounding rectangle.
      */
@@ -178,6 +180,7 @@ private:
     }
 
     SkISize                    fDimensions;
+    SkScalar                   fHeadroom = 1.f;
     GrInternalSurfaceFlags     fSurfaceFlags;
     skgpu::Protected           fIsProtected;
     sk_sp<RefCntedReleaseProc> fReleaseHelper;

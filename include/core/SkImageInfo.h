@@ -237,7 +237,7 @@ public:
     */
     static SkImageInfo Make(int width, int height, SkColorType ct, SkAlphaType at);
     static SkImageInfo Make(int width, int height, SkColorType ct, SkAlphaType at,
-                            sk_sp<SkColorSpace> cs);
+                            sk_sp<SkColorSpace> cs, float headroom = 1.0f);
     static SkImageInfo Make(SkISize dimensions, SkColorType ct, SkAlphaType at);
     static SkImageInfo Make(SkISize dimensions, SkColorType ct, SkAlphaType at,
                             sk_sp<SkColorSpace> cs);
@@ -432,6 +432,10 @@ public:
     */
     SkIRect bounds() const { return SkIRect::MakeSize(fDimensions); }
 
+    /** Returns headroom of this image
+    */
+    SkScalar headroom() const { return fHeadroom; }
+
     /** Returns true if associated SkColorSpace is not nullptr, and SkColorSpace gamma
         is approximately the same as sRGB.
         This includes the
@@ -623,12 +627,16 @@ public:
 private:
     SkColorInfo fColorInfo;
     SkISize fDimensions = {0, 0};
+    SkScalar fHeadroom = 1.f;
 
     SkImageInfo(SkISize dimensions, const SkColorInfo& colorInfo)
             : fColorInfo(colorInfo), fDimensions(dimensions) {}
 
     SkImageInfo(SkISize dimensions, SkColorInfo&& colorInfo)
             : fColorInfo(std::move(colorInfo)), fDimensions(dimensions) {}
+
+    SkImageInfo(SkISize dimensions, SkColorInfo&& colorInfo, SkScalar headroom)
+            : fColorInfo(std::move(colorInfo)), fDimensions(dimensions), fHeadroom(headroom) {}
 };
 
 #endif

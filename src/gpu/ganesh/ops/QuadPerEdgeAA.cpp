@@ -631,11 +631,12 @@ public:
                                      GrSamplerState samplerState,
                                      const skgpu::Swizzle& swizzle,
                                      sk_sp<GrColorSpaceXform> textureColorSpaceXform,
-                                     Saturate saturate) {
+                                     Saturate saturate,
+                                     SkScalar headroom) {
         return arena->make([&](void* ptr) {
             return new (ptr) QuadPerEdgeAAGeometryProcessor(
                     vertexSpec, caps, backendFormat, samplerState, swizzle,
-                    std::move(textureColorSpaceXform), saturate);
+                    std::move(textureColorSpaceXform), saturate, headroom);
         });
     }
 
@@ -680,6 +681,9 @@ public:
                          const GrGeometryProcessor& geomProc) override {
                 const auto& gp = geomProc.cast<QuadPerEdgeAAGeometryProcessor>();
                 fTextureColorSpaceXformHelper.setData(pdman, gp.fTextureColorSpaceXform.get());
+                if (gp.fSampler.isInitialized()) {
+                    pdman.set1f(fHeadroom, gp.fHeadroom);
+                }
             }
 
         private:
@@ -773,6 +777,12 @@ public:
                             blendDst, SkBlendMode::kModulate, args.fTexSamplers[0],
                             "texCoord", &fTextureColorSpaceXformHelper);
                     args.fFragBuilder->codeAppend(");");
+
+                    // Now multiply the headroom
+                    fHeadroom = args.fUniformHandler->addUniform(nullptr, kFragment_GrShaderFlag, SkSLType::kHalf, "Headroom");
+                    const char* headroom = args.fUniformHandler->getUniformCStr(fHeadroom);
+                    args.fFragBuilder->codeAppendf("%s = half4(%s.rgb * %s, %s.a);",
+                        args.fOutputColor, args.fOutputColor, headroom, args.fOutputColor);
                 } else {
                     // Saturate is only intended for use with a proxy to account for the fact
                     // that TextureOp skips SkPaint conversion, which normally handles this.
@@ -826,6 +836,7 @@ public:
             }
 
             GrGLSLColorSpaceXformHelper fTextureColorSpaceXformHelper;
+            GrGLSLProgramDataManager::UniformHandle fHeadroom;
         };
 
         return std::make_unique<Impl>();
@@ -848,11 +859,13 @@ private:
                                    GrSamplerState samplerState,
                                    const skgpu::Swizzle& swizzle,
                                    sk_sp<GrColorSpaceXform> textureColorSpaceXform,
-                                   Saturate saturate)
+                                   Saturate saturate,
+                                   SkScalar headroom)
             : INHERITED(kQuadPerEdgeAAGeometryProcessor_ClassID)
             , fSaturate(saturate)
             , fTextureColorSpaceXform(std::move(textureColorSpaceXform))
-            , fSampler(samplerState, backendFormat, swizzle) {
+            , fSampler(samplerState, backendFormat, swizzle)
+            , fHeadroom(headroom) {
         SkASSERT(spec.hasLocalCoords());
         this->initializeAttrs(spec);
         this->setTextureSamplerCnt(1);
@@ -922,6 +935,7 @@ private:
     // to skip texturing.
     sk_sp<GrColorSpaceXform> fTextureColorSpaceXform;
     TextureSampler fSampler;
+    SkScalar fHeadroom = 1.f;
 
     using INHERITED = GrGeometryProcessor;
 };
@@ -937,10 +951,11 @@ GrGeometryProcessor* MakeTexturedProcessor(SkArenaAlloc* arena,
                                            GrSamplerState samplerState,
                                            const skgpu::Swizzle& swizzle,
                                            sk_sp<GrColorSpaceXform> textureColorSpaceXform,
-                                           Saturate saturate) {
+                                           Saturate saturate,
+                                           SkScalar headroom) {
     return QuadPerEdgeAAGeometryProcessor::Make(arena, spec, caps, backendFormat, samplerState,
                                                 swizzle, std::move(textureColorSpaceXform),
-                                                saturate);
+                                                saturate, headroom);
 }
 
 }  // namespace skgpu::ganesh::QuadPerEdgeAA

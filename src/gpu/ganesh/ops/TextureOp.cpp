@@ -674,6 +674,8 @@ private:
         {
             const GrBackendFormat& backendFormat =
                     fViewCountPairs[0].fProxy->backendFormat();
+            
+            const SkScalar headroom = fViewCountPairs[0].fProxy->headroom();
 
             GrSamplerState samplerState = GrSamplerState(GrSamplerState::WrapMode::kClamp,
                                                          fMetadata.filter());
@@ -686,7 +688,8 @@ private:
                     samplerState,
                     fMetadata.fSwizzle,
                     std::move(fTextureColorSpaceXform),
-                    fMetadata.saturate());
+                    fMetadata.saturate(),
+                    headroom);
 
             SkASSERT(fDesc->fVertexSpec.vertexSize() == gp->vertexStride());
         }
@@ -1187,6 +1190,8 @@ GrOp::Owner TextureOp::Make(GrRecordingContext* context,
                             GrAAType aaType,
                             DrawQuad* quad,
                             const SkRect* subset) {
+    SkScalar headroom = proxyView.proxy()->headroom();
+
     // Apply optimizations that are valid whether or not using TextureOp or FillRectOp
     if (subset && subset->contains(proxyView.proxy()->backingStoreBoundsRect())) {
         // No need for a shader-based subset if hardware clamping achieves the same effect
@@ -1233,6 +1238,9 @@ GrOp::Owner TextureOp::Make(GrRecordingContext* context,
         if (saturate == Saturate::kYes) {
             fp = GrFragmentProcessor::ClampOutput(std::move(fp));
         }
+
+        fp = GrFragmentProcessor::MulHeadroom(std::move(fp), headroom);
+
         paint.setColorFragmentProcessor(std::move(fp));
         return ganesh::FillRectOp::Make(context, std::move(paint), aaType, quad);
     }

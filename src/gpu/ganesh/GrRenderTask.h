@@ -113,6 +113,7 @@ public:
     uint32_t uniqueID() const { return fUniqueID; }
     int numTargets() const { return fTargets.size(); }
     GrSurfaceProxy* target(int i) const { return fTargets[i].get(); }
+    sk_sp<GrSurfaceProxy> getSpTarget(int i) const { return fTargets[i]; }
 
     /*
      * Safely cast this GrRenderTask to a OpsTask (if possible).

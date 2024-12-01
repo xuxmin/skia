@@ -172,8 +172,8 @@ SkImageInfo SkImageInfo::Make(int width, int height, SkColorType ct, SkAlphaType
 }
 
 SkImageInfo SkImageInfo::Make(int width, int height, SkColorType ct, SkAlphaType at,
-                              sk_sp<SkColorSpace> cs) {
-    return SkImageInfo({width, height}, {ct, at, std::move(cs)});
+                              sk_sp<SkColorSpace> cs, float headroom) {
+    return SkImageInfo({width, height}, {ct, at, std::move(cs)}, headroom);
 }
 
 SkImageInfo SkImageInfo::Make(SkISize dimensions, SkColorType ct, SkAlphaType at) {

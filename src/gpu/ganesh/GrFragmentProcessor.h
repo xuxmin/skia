@@ -124,6 +124,9 @@ public:
      */
     static std::unique_ptr<GrFragmentProcessor> ClampOutput(std::unique_ptr<GrFragmentProcessor>);
 
+
+    static std::unique_ptr<GrFragmentProcessor> MulHeadroom(std::unique_ptr<GrFragmentProcessor>, SkScalar);
+
     /**
      * Returns a fragment processor that composes two fragment processors `f` and `g` into f(g(x)).
      * This is equivalent to running them in series (`g`, then `f`). This is not the same as

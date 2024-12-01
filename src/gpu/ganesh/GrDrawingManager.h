@@ -71,6 +71,10 @@ public:
     // OpsTasks created at flush time are stored and handled different from the others.
     sk_sp<skgpu::ganesh::OpsTask> newOpsTask(GrSurfaceProxyView, sk_sp<GrArenas> arenas);
 
+    GrOp::Owner getBlenderOp(SkRect bounds, SkScalar headroom);
+
+    bool addBlenderOpToOpsTask(skgpu::ganesh::OpsTask* opsTask, bool isBegin);
+
     // Adds 'atlasTask' to the DAG and leaves it open.
     //
     // If 'previousAtlasTask' is provided, closes it and configures dependencies to guarantee

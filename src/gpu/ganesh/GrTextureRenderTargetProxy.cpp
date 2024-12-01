@@ -41,9 +41,10 @@ GrTextureRenderTargetProxy::GrTextureRenderTargetProxy(const GrCaps& caps,
                                                        GrInternalSurfaceFlags surfaceFlags,
                                                        UseAllocator useAllocator,
                                                        GrDDLProvider creatingProvider,
-                                                       std::string_view label)
+                                                       std::string_view label,
+                                                       SkScalar headroom)
         : GrSurfaceProxy(
-                  format, dimensions, fit, budgeted, isProtected, surfaceFlags, useAllocator, label)
+                  format, dimensions, fit, budgeted, isProtected, surfaceFlags, useAllocator, label, headroom)
         // for now textures w/ data are always wrapped
         , GrRenderTargetProxy(caps,
                               format,
@@ -83,7 +84,8 @@ GrTextureRenderTargetProxy::GrTextureRenderTargetProxy(const GrCaps& caps,
                                                        GrInternalSurfaceFlags surfaceFlags,
                                                        UseAllocator useAllocator,
                                                        GrDDLProvider creatingProvider,
-                                                       std::string_view label)
+                                                       std::string_view label,
+                                                       SkScalar headroom)
         : GrSurfaceProxy(std::move(callback),
                          format,
                          dimensions,
@@ -92,7 +94,8 @@ GrTextureRenderTargetProxy::GrTextureRenderTargetProxy(const GrCaps& caps,
                          isProtected,
                          surfaceFlags,
                          useAllocator,
-                         label)
+                         label,
+                         headroom)
         // Since we have virtual inheritance, we initialize GrSurfaceProxy directly. Send null
         // callbacks to the texture and RT proxies simply to route to the appropriate constructors.
         , GrRenderTargetProxy(LazyInstantiateCallback(),

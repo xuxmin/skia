@@ -193,7 +193,8 @@ private:
                                                GrSamplerState,
                                                const skgpu::Swizzle&,
                                                sk_sp<GrColorSpaceXform> textureColorSpaceXform,
-                                               Saturate);
+                                               Saturate,
+                                               SkScalar);
 
     // This method will return the correct index buffer for the specified indexBufferOption.
     // It will, correctly, return nullptr if the indexBufferOption is kTriStrips.

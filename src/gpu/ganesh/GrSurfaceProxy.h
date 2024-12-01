@@ -147,6 +147,11 @@ public:
         SkASSERT(!this->isFullyLazy());
         return fDimensions;
     }
+
+    SkScalar headroom() const {
+        return fHeadroom;
+    }
+
     int width() const { return this->dimensions().width(); }
     int height() const { return this->dimensions().height(); }
 
@@ -392,7 +397,8 @@ protected:
                    GrProtected,
                    GrInternalSurfaceFlags,
                    UseAllocator,
-                   std::string_view label);
+                   std::string_view label,
+                   SkScalar headroom = 1.f);
     // Lazy-callback version - takes a new UniqueID from the shared resource/proxy pool.
     GrSurfaceProxy(LazyInstantiateCallback&&,
                    const GrBackendFormat&,
@@ -402,7 +408,8 @@ protected:
                    GrProtected,
                    GrInternalSurfaceFlags,
                    UseAllocator,
-                   std::string_view label);
+                   std::string_view label,
+                   SkScalar headroom = 1.f);
 
     // Wrapped version - shares the UniqueID of the passed surface.
     // Takes UseAllocator because even though this is already instantiated it still can participate
@@ -459,6 +466,9 @@ private:
     // wrapped resource.
     const GrBackendFormat  fFormat;
     SkISize                fDimensions;
+
+    // For hdr headroom
+    SkScalar               fHeadroom = 1.f;
 
     SkBackingFit           fFit;      // always kApprox for lazy-callback resources
                                       // always kExact for wrapped resources

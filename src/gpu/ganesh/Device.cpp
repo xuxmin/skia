@@ -304,7 +304,8 @@ sk_sp<Device> Device::Make(GrRecordingContext* rContext,
                                         mipmapped,
                                         isProtected,
                                         origin,
-                                        budgeted);
+                                        budgeted,
+                                        ii.headroom());
 
     return Device::Make(std::move(sdc), ii.alphaType(), init);
 }

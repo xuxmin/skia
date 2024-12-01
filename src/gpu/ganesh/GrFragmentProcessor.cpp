@@ -257,6 +257,21 @@ std::unique_ptr<GrFragmentProcessor> GrFragmentProcessor::ClampOutput(
                           GrSkSLFP::OptFlags::kPreservesOpaqueInput);
 }
 
+std::unique_ptr<GrFragmentProcessor> GrFragmentProcessor::MulHeadroom(
+        std::unique_ptr<GrFragmentProcessor> fp, SkScalar headroom) {
+    SkASSERT(fp);
+    static const SkRuntimeEffect* effect = SkMakeRuntimeEffect(SkRuntimeEffect::MakeForColorFilter,
+        "uniform float headroom;"
+        "half4 main(half4 inColor) {"
+            "return inColor * headroom;"
+        "}"
+    );
+    SkASSERT(SkRuntimeEffectPriv::SupportsConstantOutputForConstantInput(effect));
+    return GrSkSLFP::Make(effect, "MulHeadroom", std::move(fp),
+                          GrSkSLFP::OptFlags::kPreservesOpaqueInput,
+                          "headroom", headroom);
+}
+
 std::unique_ptr<GrFragmentProcessor> GrFragmentProcessor::SwizzleOutput(
         std::unique_ptr<GrFragmentProcessor> fp, const skgpu::Swizzle& swizzle) {
     class SwizzleFragmentProcessor : public GrFragmentProcessor {

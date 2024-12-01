@@ -115,7 +115,8 @@ public:
                                       GrProtected,
                                       std::string_view label,
                                       GrInternalSurfaceFlags = GrInternalSurfaceFlags::kNone,
-                                      UseAllocator useAllocator = UseAllocator::kYes);
+                                      UseAllocator useAllocator = UseAllocator::kYes,
+                                      SkScalar headroom = 1.f);
 
     /*
      * Create a texture proxy from compressed texture data.

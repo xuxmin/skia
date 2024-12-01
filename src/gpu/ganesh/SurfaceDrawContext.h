@@ -104,7 +104,8 @@ public:
                                                     skgpu::Mipmapped = skgpu::Mipmapped::kNo,
                                                     skgpu::Protected = skgpu::Protected::kNo,
                                                     GrSurfaceOrigin = kBottomLeft_GrSurfaceOrigin,
-                                                    skgpu::Budgeted = skgpu::Budgeted::kYes);
+                                                    skgpu::Budgeted = skgpu::Budgeted::kYes,
+                                                    SkScalar headroom = 1.f);
 
     /**
      * Takes custom swizzles rather than determining swizzles from color type and format.

@@ -237,7 +237,8 @@ std::unique_ptr<SurfaceDrawContext> SurfaceDrawContext::Make(GrRecordingContext*
                                                              skgpu::Mipmapped mipmapped,
                                                              GrProtected isProtected,
                                                              GrSurfaceOrigin origin,
-                                                             skgpu::Budgeted budgeted) {
+                                                             skgpu::Budgeted budgeted,
+                                                             SkScalar headroom) {
     if (!rContext) {
         return nullptr;
     }
@@ -255,7 +256,10 @@ std::unique_ptr<SurfaceDrawContext> SurfaceDrawContext::Make(GrRecordingContext*
             fit,
             budgeted,
             isProtected,
-            label);
+            label,
+            GrInternalSurfaceFlags::kNone,
+            GrSurfaceProxy::UseAllocator::kYes,
+            headroom);
     if (!proxy) {
         return nullptr;
     }

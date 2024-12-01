@@ -37,9 +37,10 @@ GrTextureProxy::GrTextureProxy(const GrBackendFormat& format,
                                GrInternalSurfaceFlags surfaceFlags,
                                UseAllocator useAllocator,
                                GrDDLProvider creatingProvider,
-                               std::string_view label)
+                               std::string_view label,
+                               SkScalar headroom)
         : INHERITED(
-                  format, dimensions, fit, budgeted, isProtected, surfaceFlags, useAllocator, label)
+                  format, dimensions, fit, budgeted, isProtected, surfaceFlags, useAllocator, label, headroom)
         , fMipmapped(mipmapped)
         , fMipmapStatus(mipmapStatus) SkDEBUGCODE(, fInitialMipmapStatus(fMipmapStatus))
         , fCreatingProvider(creatingProvider)
@@ -63,7 +64,8 @@ GrTextureProxy::GrTextureProxy(LazyInstantiateCallback&& callback,
                                GrInternalSurfaceFlags surfaceFlags,
                                UseAllocator useAllocator,
                                GrDDLProvider creatingProvider,
-                               std::string_view label)
+                               std::string_view label,
+                               SkScalar headroom)
         : INHERITED(std::move(callback),
                     format,
                     dimensions,
@@ -72,7 +74,8 @@ GrTextureProxy::GrTextureProxy(LazyInstantiateCallback&& callback,
                     isProtected,
                     surfaceFlags,
                     useAllocator,
-                    label)
+                    label,
+                    headroom)
         , fMipmapped(mipmapped)
         , fMipmapStatus(mipmapStatus) SkDEBUGCODE(, fInitialMipmapStatus(fMipmapStatus))
         , fCreatingProvider(creatingProvider)

@@ -21,6 +21,9 @@
 #include "include/private/gpu/ganesh/GrTypesPriv.h"
 #include "src/base/SkTInternalLList.h"
 #include "src/core/SkTraceEvent.h"
+#include "src/core/SkRuntimeEffectPriv.h"
+#include "src/core/SkBlenderBase.h"
+#include "src/core/SkRuntimeBlender.h"
 #include "src/gpu/ganesh/GrAuditTrail.h"
 #include "src/gpu/ganesh/GrBufferTransferRenderTask.h"
 #include "src/gpu/ganesh/GrBufferUpdateRenderTask.h"
@@ -52,6 +55,9 @@
 #include "src/gpu/ganesh/ops/GrOp.h"
 #include "src/gpu/ganesh/ops/OpsTask.h"
 #include "src/gpu/ganesh/ops/SoftwarePathRenderer.h"
+#include "src/gpu/ganesh/ops/FillRectOp.h"
+#include "src/gpu/ganesh/effects/GrSkSLFP.h"
+#include "src/gpu/ganesh/GrProxyProvider.h"
 
 #include <algorithm>
 #include <memory>
@@ -221,6 +227,94 @@ bool GrDrawingManager::flush(SkSpan<GrSurfaceProxy*> proxies,
     fFlushing = false;
 
     return true;
+}
+
+GrOp::Owner GrDrawingManager::getBlenderOp(SkRect bounds, SkScalar headroom) {
+    const char* sksl =
+        "uniform float headroom;"
+        "half4 main(half4 src, half4 dst) {"
+        "  return half4(dst.rgb * headroom, dst.a);"  // Sample 'image', then swap red and blue
+        "}";
+
+    static sk_sp<SkRuntimeEffect> effect = SkRuntimeEffect::MakeForBlender(SkString(sksl)).effect;
+    SkRuntimeBlendBuilder builder(effect);
+    builder.uniform("headroom") = headroom;
+    auto blender = static_cast<const SkRuntimeBlender*>(builder.makeBlender().get());
+
+    GrPaint grPaint;
+    skia_private::STArray<1, std::unique_ptr<GrFragmentProcessor>> childFPs;
+    auto fp = GrSkSLFP::MakeWithData(effect,
+                                    "runtime_blender",
+                                    nullptr,
+                                    nullptr,
+                                    std::move(GrFragmentProcessor::SurfaceColor()),
+                                    std::move(blender->uniforms()),
+                                    SkSpan(childFPs));
+    grPaint.setColorFragmentProcessor(std::move(fp));
+    grPaint.setXPFactory(GrXPFactory::FromBlendMode(SkBlendMode::kSrc));
+    auto op = skgpu::ganesh::FillRectOp::MakeNonAARect(fContext, std::move(grPaint), SkMatrix::I(), bounds);
+    return op;
+}
+
+bool GrDrawingManager::addBlenderOpToOpsTask(skgpu::ganesh::OpsTask* opsTask, bool isBegin) {
+    GrRenderTargetProxy* proxy = opsTask->target(0)->asRenderTargetProxy();
+    SkRect rect = proxy->getBoundsRect();
+    SkIRect irect = SkIRect::MakeLTRB(rect.fLeft, rect.fTop, rect.fRight, rect.fBottom);
+
+    SkScalar headroom = opsTask->target(0)->headroom();
+    if (!isBegin) {
+        headroom = 1 / headroom;
+    }
+    auto op = getBlenderOp(rect, headroom);
+    GrDrawOp* drawOp = (GrDrawOp*)op.get();
+
+    GrAppliedClip appliedClip(opsTask->target(0)->dimensions(), opsTask->target(0)->backingStoreDimensions());
+
+    auto caps = fContext->priv().caps();
+    GrProcessorSet::Analysis analysis = drawOp->finalize(*caps, &appliedClip, GrClampType::kNone);
+    GrDstProxyView dstProxyView;
+    if (analysis.requiresDstTexture()) {
+        // First get the dstSampleFlags as if we will put the draw into the current OpsTask
+        auto dstSampleFlags = caps->getDstSampleFlagsForProxy(proxy, false /* Not use MSAA */);
+        if (dstSampleFlags & GrDstSampleFlags::kRequiresTextureBarrier) {
+            const GrBackendFormat& format = proxy->backendFormat();
+            skgpu::Swizzle readSwizzle = caps->getReadSwizzle(format, GrColorType::kRGBA_8888);
+            GrSurfaceProxyView view(opsTask->getSpTarget(0), GrSurfaceOrigin::kTopLeft_GrSurfaceOrigin, readSwizzle);
+
+            // opsTask->resetFlag(GrRenderTask::kClosed_Flag);
+            dstProxyView.setProxyView(view);
+            dstProxyView.setOffset(0, 0);
+            dstProxyView.setDstSampleFlags(GrDstSampleFlags::kRequiresTextureBarrier | GrDstSampleFlags::kAsInputAttachment);
+            opsTask->addDrawOp(this, std::move(op), false, analysis, std::move(appliedClip), dstProxyView,
+                                            GrTextureResolveManager(this), *caps);
+            // opsTask->makeClosed(fContext);
+            return true;
+        } else {
+            // 如果不支持 InputAttachment, 那么会有问题啊, 我们暂时先不加了
+            return false;
+            // const GrBackendFormat& format = proxy->backendFormat();
+            // skgpu::Swizzle readSwizzle = caps->getReadSwizzle(format, GrColorType::kRGBA_8888);
+            
+            // SkIRect conservativeDrawBounds = drawOp->bounds().roundOut();
+            // conservativeDrawBounds.outset(1, 1);
+            // SkIRect copyRect = SkIRect::MakeSize(surfaceProxy->backingStoreDimensions());
+            // SkIPoint dstOffset = {copyRect.fLeft, copyRect.fTop};
+            // auto copy = GrSurfaceProxy::Copy(fContext,
+            //                                 surfaceProxy,
+            //                                 GrSurfaceOrigin::kTopLeft_GrSurfaceOrigin,
+            //                                 skgpu::Mipmapped::kNo,
+            //                                 copyRect,
+            //                                 SkBackingFit::kApprox,
+            //                                 skgpu::Budgeted::kYes,
+            //                                 /*label=*/{},
+            //                                 GrSurfaceProxy::RectsMustMatch::kNo);
+
+            // dstProxyView.setProxyView({std::move(copy), GrSurfaceOrigin::kTopLeft_GrSurfaceOrigin, readSwizzle});
+            // dstProxyView.setOffset(dstOffset);
+            // dstProxyView.setDstSampleFlags(dstSampleFlags);
+        }
+    }
+    return false;
 }
 
 bool GrDrawingManager::submitToGpu() {
@@ -682,6 +776,7 @@ void GrDrawingManager::closeActiveOpsTask() {
         // reordering so ops that (in the single opsTask world) would've just glommed onto the
         // end of the single opsTask but referred to a far earlier RT need to appear in their
         // own opsTask.
+        addBlenderOpToOpsTask(fActiveOpsTask, false);
         fActiveOpsTask->makeClosed(fContext);
         fActiveOpsTask = nullptr;
     }
@@ -702,6 +797,8 @@ sk_sp<skgpu::ganesh::OpsTask> GrDrawingManager::newOpsTask(GrSurfaceProxyView su
     this->appendTask(opsTask);
 
     fActiveOpsTask = opsTask.get();
+
+    addBlenderOpToOpsTask(fActiveOpsTask, true);
 
     SkDEBUGCODE(this->validate());
     return opsTask;
