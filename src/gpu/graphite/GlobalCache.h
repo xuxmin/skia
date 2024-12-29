@@ -50,7 +50,6 @@ public:
     sk_sp<GraphicsPipeline> addGraphicsPipeline(const UniqueKey&,
                                                 sk_sp<GraphicsPipeline>) SK_EXCLUDES(fSpinLock);
 
-#if defined(GPU_TEST_UTILS)
     int numGraphicsPipelines() const SK_EXCLUDES(fSpinLock);
     void resetGraphicsPipelines() SK_EXCLUDES(fSpinLock);
     void forEachGraphicsPipeline(
@@ -65,7 +64,6 @@ public:
     };
 
     PipelineStats getStats() const SK_EXCLUDES(fSpinLock);
-#endif
 
     // Find and add operations for ComputePipelines, with the same pattern as GraphicsPipelines.
     sk_sp<ComputePipeline> findComputePipeline(const UniqueKey&) SK_EXCLUDES(fSpinLock);

@@ -62,24 +62,21 @@ public:
         // In test-enabled builds, we preserve the generated shader code to display in the viewer
         // slide UI. This is not quite enough information to fully recreate the pipeline, as the
         // RenderPassDesc used to make the pipeline is not preserved.
-#if defined(GPU_TEST_UTILS)
         std::string fLabel;
 
         std::string fSkSLVertexShader;
         std::string fSkSLFragmentShader;
         std::string fNativeVertexShader;
         std::string fNativeFragmentShader;
-#endif
 #if SK_HISTOGRAMS_ENABLED
         bool fFromPrecompile = false;
 #endif
     };
 
-#if defined(GPU_TEST_UTILS)
     const PipelineInfo& getPipelineInfo() const {
         return fPipelineInfo;
     }
-#endif
+
 #if SK_HISTOGRAMS_ENABLED
     bool fromPrecompile() const { return fPipelineInfo.fFromPrecompile; }
 #endif
