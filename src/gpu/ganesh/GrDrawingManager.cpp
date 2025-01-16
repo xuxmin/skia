@@ -256,16 +256,14 @@ GrOp::Owner GrDrawingManager::getBlenderOp(SkRect bounds, SkScalar headroom) {
     return op;
 }
 
-bool GrDrawingManager::addBlenderOpToOpsTask(skgpu::ganesh::OpsTask* opsTask, bool isBegin) {
+bool GrDrawingManager::addBlenderOpToOpsTask(skgpu::ganesh::OpsTask* opsTask, bool isBegin, SkRect bounds) {
     GrRenderTargetProxy* proxy = opsTask->target(0)->asRenderTargetProxy();
-    SkRect rect = proxy->getBoundsRect();
-    SkIRect irect = SkIRect::MakeLTRB(rect.fLeft, rect.fTop, rect.fRight, rect.fBottom);
 
     SkScalar headroom = opsTask->target(0)->headroom();
     if (!isBegin) {
         headroom = 1 / headroom;
     }
-    auto op = getBlenderOp(rect, headroom);
+    auto op = getBlenderOp(bounds, headroom);
     GrDrawOp* drawOp = (GrDrawOp*)op.get();
 
     GrAppliedClip appliedClip(opsTask->target(0)->dimensions(), opsTask->target(0)->backingStoreDimensions());
@@ -776,7 +774,16 @@ void GrDrawingManager::closeActiveOpsTask() {
         // reordering so ops that (in the single opsTask world) would've just glommed onto the
         // end of the single opsTask but referred to a far earlier RT need to appear in their
         // own opsTask.
-        addBlenderOpToOpsTask(fActiveOpsTask, false);
+        SkRect bounds = SkRect::MakeEmpty();
+        for (int i = 0; i < fActiveOpsTask->numOpChainsTest(); ++i) {
+            bounds.join(fActiveOpsTask->getChainRef(i)->bounds());
+        }
+        if (!bounds.isEmpty() && fActiveOpsTask->getChainRef(0) != nullptr) {
+            auto op = fActiveOpsTask->getChainRef(0)->head();
+            skgpu::ganesh::FillRectOp::UpdateBounds(op, bounds);
+            fActiveOpsTask->setChainBounds(0, bounds);
+            addBlenderOpToOpsTask(fActiveOpsTask, false, bounds);
+        }
         fActiveOpsTask->makeClosed(fContext);
         fActiveOpsTask = nullptr;
     }
@@ -798,7 +805,7 @@ sk_sp<skgpu::ganesh::OpsTask> GrDrawingManager::newOpsTask(GrSurfaceProxyView su
 
     fActiveOpsTask = opsTask.get();
 
-    addBlenderOpToOpsTask(fActiveOpsTask, true);
+    addBlenderOpToOpsTask(fActiveOpsTask, true, SkRect::MakeEmpty());
 
     SkDEBUGCODE(this->validate());
     return opsTask;

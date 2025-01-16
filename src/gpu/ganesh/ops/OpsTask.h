@@ -187,6 +187,7 @@ private:
         GrAppliedClip* appliedClip() const { return fAppliedClip; }
         const GrDstProxyView& dstProxyView() const { return fDstProxyView; }
         const SkRect& bounds() const { return fBounds; }
+        void setBounds(SkRect rect) { fBounds = rect; }
 
         // Deletes all the ops in the chain.
         void deleteOps();
@@ -267,6 +268,19 @@ private:
 
     // Remove all ops, proxies, etc. Used in the merging algorithm when tasks can be skipped.
     void reset();
+
+public:
+    OpChain* getChainRef(int index) { 
+        if (fOpChains.empty()) 
+            return nullptr;
+        else 
+            return &fOpChains[index]; 
+    }
+    void setChainBounds(int index, SkRect bounds) {
+        fOpChains[index].setBounds(bounds);
+    }
+    int numOpChainsTest() const { return fOpChains.size(); }
+private:
 
     friend class ::OpsTaskTestingAccess;
 

@@ -73,7 +73,7 @@ public:
 
     GrOp::Owner getBlenderOp(SkRect bounds, SkScalar headroom);
 
-    bool addBlenderOpToOpsTask(skgpu::ganesh::OpsTask* opsTask, bool isBegin);
+    bool addBlenderOpToOpsTask(skgpu::ganesh::OpsTask* opsTask, bool isBegin, SkRect bounds);
 
     // Adds 'atlasTask' to the DAG and leaves it open.
     //

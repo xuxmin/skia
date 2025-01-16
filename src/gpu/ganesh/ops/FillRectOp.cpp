@@ -139,6 +139,11 @@ public:
         }
     }
 
+    void updateBounds(SkRect bounds) {
+        DrawQuad quad{GrQuad(bounds), GrQuad(bounds), GrQuadAAFlags::kNone};
+        addQuad(&quad, SK_PMColor4fTRANSPARENT, GrAAType::kNone);
+    }
+
     const char* name() const override { return "FillRectOp"; }
 
     void visitProxies(const GrVisitProxyFunc& func) const override {
@@ -503,6 +508,14 @@ GrOp::Owner FillRectOp::Make(GrRecordingContext* context,
                              InputFlags inputFlags) {
     return FillRectOpImpl::Make(context, std::move(paint), aaType, std::move(quad), stencil,
                                 inputFlags);
+}
+
+void FillRectOp::UpdateBounds(GrOp* op, SkRect bounds) {
+    if (op == nullptr || op->name() != "FillRectOp") {
+        return;
+    }
+    auto fillOp = (FillRectOpImpl*) op;
+    fillOp->updateBounds(bounds);
 }
 
 GrOp::Owner FillRectOp::MakeNonAARect(GrRecordingContext* context,

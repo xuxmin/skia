@@ -44,6 +44,8 @@ public:
                             const GrUserStencilSettings* = nullptr,
                             InputFlags = InputFlags::kNone);
 
+    static void UpdateBounds(GrOp* op, SkRect bounds);
+
     // Utility function to create a non-AA rect transformed by view. This is used commonly enough
     // in testing and GMs that manage ops without going through GrRTC that it's worth the
     // convenience.
