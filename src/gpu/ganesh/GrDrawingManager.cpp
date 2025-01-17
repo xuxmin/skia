@@ -186,6 +186,38 @@ bool GrDrawingManager::flush(SkSpan<GrSurfaceProxy*> proxies,
             }
         }
 
+        // 我想在这里修改 HeadroomOp 的范围
+        for (int i = 0; i < fDAG.size(); i++) {
+            sk_sp<GrRenderTask>& task = fDAG[i];
+            if (auto opsTask = task->asOpsTask()) {
+
+                int num = opsTask->numOpChainsTest();
+                if (num == 0) {
+                    continue;
+                }
+
+                SkRect bounds = SkRect::MakeEmpty();
+                for (int j = 0; j < num; ++j) {
+                    if (skgpu::ganesh::FillRectOp::IsHeadroomOp(opsTask->getChainRef(j)->head())) {
+                        continue;
+                    }
+                    bounds.join(opsTask->getChainRef(j)->bounds());
+                }
+
+                auto op = opsTask->getChainRef(0)->head();
+                if (skgpu::ganesh::FillRectOp::IsHeadroomOp(op)) {
+                    skgpu::ganesh::FillRectOp::UpdateBounds(op, bounds);
+                    opsTask->setChainBounds(0, bounds);
+                }
+
+                op = opsTask->getChainRef(num-1)->head();
+                if (skgpu::ganesh::FillRectOp::IsHeadroomOp(op)) {
+                    skgpu::ganesh::FillRectOp::UpdateBounds(op, bounds);
+                    opsTask->setChainBounds(num-1, bounds);
+                }
+            }
+        }
+
 #if 0
         // Enable this to print out verbose GrOp information
         SkDEBUGCODE(SkDebugf("RenderTasks (%d):\n", fDAG.count()));
@@ -252,7 +284,7 @@ GrOp::Owner GrDrawingManager::getBlenderOp(SkRect bounds, SkScalar headroom) {
                                     SkSpan(childFPs));
     grPaint.setColorFragmentProcessor(std::move(fp));
     grPaint.setXPFactory(GrXPFactory::FromBlendMode(SkBlendMode::kSrc));
-    auto op = skgpu::ganesh::FillRectOp::MakeNonAARect(fContext, std::move(grPaint), SkMatrix::I(), bounds);
+    auto op = skgpu::ganesh::FillRectOp::MakeNonAARect(fContext, std::move(grPaint), SkMatrix::I(), bounds, nullptr, true);
     return op;
 }
 
@@ -775,15 +807,16 @@ void GrDrawingManager::closeActiveOpsTask() {
         // end of the single opsTask but referred to a far earlier RT need to appear in their
         // own opsTask.
         SkRect bounds = SkRect::MakeEmpty();
-        for (int i = 0; i < fActiveOpsTask->numOpChainsTest(); ++i) {
-            bounds.join(fActiveOpsTask->getChainRef(i)->bounds());
-        }
-        if (!bounds.isEmpty() && fActiveOpsTask->getChainRef(0) != nullptr) {
-            auto op = fActiveOpsTask->getChainRef(0)->head();
-            skgpu::ganesh::FillRectOp::UpdateBounds(op, bounds);
-            fActiveOpsTask->setChainBounds(0, bounds);
-            addBlenderOpToOpsTask(fActiveOpsTask, false, bounds);
-        }
+        // for (int i = 0; i < fActiveOpsTask->numOpChainsTest(); ++i) {
+        //     bounds.join(fActiveOpsTask->getChainRef(i)->bounds());
+        // }
+        // if (!bounds.isEmpty() && fActiveOpsTask->getChainRef(0) != nullptr) {
+        //     auto op = fActiveOpsTask->getChainRef(0)->head();
+        //     skgpu::ganesh::FillRectOp::UpdateBounds(op, bounds);
+        //     fActiveOpsTask->setChainBounds(0, bounds);
+        //     addBlenderOpToOpsTask(fActiveOpsTask, false, bounds);
+        // }
+        addBlenderOpToOpsTask(fActiveOpsTask, false, SkRect::MakeXYWH(0, 0, 500, 500));
         fActiveOpsTask->makeClosed(fContext);
         fActiveOpsTask = nullptr;
     }
@@ -805,7 +838,7 @@ sk_sp<skgpu::ganesh::OpsTask> GrDrawingManager::newOpsTask(GrSurfaceProxyView su
 
     fActiveOpsTask = opsTask.get();
 
-    addBlenderOpToOpsTask(fActiveOpsTask, true, SkRect::MakeEmpty());
+    addBlenderOpToOpsTask(fActiveOpsTask, true, SkRect::MakeXYWH(0, 0, 5000, 500));
 
     SkDEBUGCODE(this->validate());
     return opsTask;

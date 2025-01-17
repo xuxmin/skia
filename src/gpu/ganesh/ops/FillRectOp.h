@@ -42,9 +42,12 @@ public:
                             GrAAType,
                             DrawQuad*,
                             const GrUserStencilSettings* = nullptr,
-                            InputFlags = InputFlags::kNone);
+                            InputFlags = InputFlags::kNone,
+                            bool isHeadroomOp = false);
 
     static void UpdateBounds(GrOp* op, SkRect bounds);
+
+    static bool IsHeadroomOp(GrOp* op);
 
     // Utility function to create a non-AA rect transformed by view. This is used commonly enough
     // in testing and GMs that manage ops without going through GrRTC that it's worth the
@@ -53,7 +56,8 @@ public:
                                      GrPaint&&,
                                      const SkMatrix& view,
                                      const SkRect&,
-                                     const GrUserStencilSettings* = nullptr);
+                                     const GrUserStencilSettings* = nullptr,
+                                     bool isHeadroomOp = false);
 
     // Bulk API for drawing quads with a single op
     // TODO(michaelludwig) - remove if the bulk API is not useful for SkiaRenderer

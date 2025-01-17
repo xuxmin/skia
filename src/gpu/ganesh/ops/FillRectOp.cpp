@@ -97,19 +97,21 @@ public:
                             GrAAType aaType,
                             DrawQuad* quad,
                             const GrUserStencilSettings* stencilSettings,
-                            Helper::InputFlags inputFlags) {
+                            Helper::InputFlags inputFlags,
+                            bool isHeadroomOp = false) {
         // Clean up deviations between aaType and edgeAA
         GrQuadUtils::ResolveAAType(aaType, quad->fEdgeFlags, quad->fDevice,
                                    &aaType, &quad->fEdgeFlags);
         return Helper::FactoryHelper<FillRectOpImpl>(context, std::move(paint), aaType, quad,
-                                                     stencilSettings, inputFlags);
+                                                     stencilSettings, inputFlags, isHeadroomOp);
     }
 
     // aaType is passed to Helper in the initializer list, so incongruities between aaType and
     // edgeFlags must be resolved prior to calling this constructor.
     FillRectOpImpl(GrProcessorSet* processorSet, SkPMColor4f paintColor, GrAAType aaType,
                    DrawQuad* quad, const GrUserStencilSettings* stencil,
-                   Helper::InputFlags inputFlags)
+                   Helper::InputFlags inputFlags,
+                   bool isHeadroomOp)
             : INHERITED(ClassID())
             , fHelper(processorSet, aaType, stencil, inputFlags)
             , fQuads(1, !fHelper.isTrivial()) {
@@ -137,11 +139,19 @@ public:
             fQuads.append(extra.fDevice, { paintColor, extra.fEdgeFlags },
                           fHelper.isTrivial() ? nullptr : &extra.fLocal);
         }
+        fIsHeadroomOp = isHeadroomOp;
     }
+    bool fIsHeadroomOp = false;    
 
     void updateBounds(SkRect bounds) {
         DrawQuad quad{GrQuad(bounds), GrQuad(bounds), GrQuadAAFlags::kNone};
-        addQuad(&quad, SK_PMColor4fTRANSPARENT, GrAAType::kNone);
+        // addQuad(&quad, SK_PMColor4fTRANSPARENT, GrAAType::kNone);
+        auto iter = fQuads.iterator();
+        while(iter.next()) {
+            *(iter.deviceQuad()) = GrQuad(bounds);
+            *(iter.localQuad()) = GrQuad(bounds);
+            break;
+        }
     }
 
     const char* name() const override { return "FillRectOp"; }
@@ -505,9 +515,10 @@ GrOp::Owner FillRectOp::Make(GrRecordingContext* context,
                              GrAAType aaType,
                              DrawQuad* quad,
                              const GrUserStencilSettings* stencil,
-                             InputFlags inputFlags) {
+                             InputFlags inputFlags,
+                             bool isHeadroomOp) {
     return FillRectOpImpl::Make(context, std::move(paint), aaType, std::move(quad), stencil,
-                                inputFlags);
+                                inputFlags, isHeadroomOp);
 }
 
 void FillRectOp::UpdateBounds(GrOp* op, SkRect bounds) {
@@ -518,14 +529,23 @@ void FillRectOp::UpdateBounds(GrOp* op, SkRect bounds) {
     fillOp->updateBounds(bounds);
 }
 
+bool FillRectOp::IsHeadroomOp(GrOp* op) {
+    if (op->classID() == FillRectOpImpl::ClassID()) {
+        auto fillOp = (FillRectOpImpl*) op;
+        return fillOp->fIsHeadroomOp;
+    }
+    return false;
+}
+
 GrOp::Owner FillRectOp::MakeNonAARect(GrRecordingContext* context,
                                       GrPaint&& paint,
                                       const SkMatrix& view,
                                       const SkRect& rect,
-                                      const GrUserStencilSettings* stencil) {
+                                      const GrUserStencilSettings* stencil,
+                                      bool isHeadroomOp) {
     DrawQuad quad{GrQuad::MakeFromRect(rect, view), GrQuad(rect), GrQuadAAFlags::kNone};
     return FillRectOpImpl::Make(context, std::move(paint), GrAAType::kNone, &quad, stencil,
-                                InputFlags::kNone);
+                                InputFlags::kNone, isHeadroomOp);
 }
 
 GrOp::Owner FillRectOp::MakeOp(GrRecordingContext* context,
