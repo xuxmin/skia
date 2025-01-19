@@ -827,6 +827,8 @@ static constexpr VkFormat kVkFormats[] = {
     VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16,
     VK_FORMAT_R16G16B16A16_UNORM,
     VK_FORMAT_R16G16_SFLOAT,
+    // Add this vkFormat
+    VK_FORMAT_R32G32B32A32_SFLOAT,
 };
 
 void GrVkCaps::setColorType(GrColorType colorType, std::initializer_list<VkFormat> formats) {
@@ -914,6 +916,26 @@ void GrVkCaps::initFormatTable(const GrContextOptions& contextOptions,
                 ctInfo.fTransferColorType = ct;
                 ctInfo.fFlags = ColorTypeInfo::kUploadData_Flag;
                 ctInfo.fReadSwizzle = skgpu::Swizzle::RGB1();
+            }
+        }
+    }
+
+    // Format: VK_FORMAT_R32G32B32A32_SFLOAT
+    {
+        constexpr VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        auto& info = this->getFormatInfo(format);
+        info.init(contextOptions, interface, physDev, properties, format);
+        if (SkToBool(info.fOptimalFlags & FormatInfo::kTexturable_Flag)) {
+            info.fColorTypeInfoCount = 1;
+            info.fColorTypeInfos = std::make_unique<ColorTypeInfo[]>(info.fColorTypeInfoCount);
+            int ctIdx = 0;
+            // Format: VK_FORMAT_R32G32B32A32_SFLOAT, Surface: kRGBA_F32
+            {
+                constexpr GrColorType ct = GrColorType::kXXM_RGBA_F32;
+                auto& ctInfo = info.fColorTypeInfos[ctIdx++];
+                ctInfo.fColorType = ct;
+                ctInfo.fTransferColorType = ct;
+                ctInfo.fFlags = ColorTypeInfo::kUploadData_Flag | ColorTypeInfo::kRenderable_Flag;
             }
         }
     }
@@ -1465,6 +1487,7 @@ void GrVkCaps::initFormatTable(const GrContextOptions& contextOptions,
     this->setColorType(GrColorType::kRG_1616,          { VK_FORMAT_R16G16_UNORM });
     this->setColorType(GrColorType::kRGBA_16161616,    { VK_FORMAT_R16G16B16A16_UNORM });
     this->setColorType(GrColorType::kRG_F16,           { VK_FORMAT_R16G16_SFLOAT });
+    this->setColorType(GrColorType::kXXM_RGBA_F32,     { VK_FORMAT_R32G32B32A32_SFLOAT });
 }
 
 void GrVkCaps::FormatInfo::InitFormatFlags(VkFormatFeatureFlags vkFlags, uint16_t* flags) {
